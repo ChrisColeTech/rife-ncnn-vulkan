@@ -1,0 +1,15 @@
+src/cmake-build-debug-visual-studio/
+src/cmake-build-debug/
+src/x64/Debug/
+src/CMakeFiles/
+.vs
+src/rife-ncnn-vulkan.dir/Debug/
+
+src/Debug/*
+src/ncnn/
+src/libwebp/
+src/rife-ncnn-vulkan.vcxproj
+src/Debug/rife-ncnn-vulkan.pdb
+src/rife-ncnn-vulkan.dir/Debug/
+src/ncnn
+src/libwebp

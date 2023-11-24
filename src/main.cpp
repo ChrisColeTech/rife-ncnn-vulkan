@@ -446,6 +446,7 @@ int main(int argc, char** argv)
     path_t input1path;
     path_t inputpath;
     path_t outputpath;
+    path_t modelpath;
     int numframe = 0;
     float timestep = 0.5f;
     path_t model = PATHSTR("rife-v2.3");
@@ -457,7 +458,7 @@ int main(int argc, char** argv)
     int tta_mode = 0;
     int tta_temporal_mode = 0;
     int uhd_mode = 0;
-    path_t pattern_format = PATHSTR("%08d.png");
+    path_t pattern_format;
 
 #if _WIN32
     setlocale(LC_ALL, "");
@@ -485,7 +486,12 @@ int main(int argc, char** argv)
             timestep = _wtof(optarg);
             break;
         case L'm':
-            model = optarg;
+            if (path_is_directory(optarg)) {
+                modelpath = optarg;
+            }
+            else {
+                model = optarg;
+            }
             break;
         case L'g':
             gpuid = parse_optarg_int_array(optarg);
@@ -611,48 +617,45 @@ int main(int argc, char** argv)
         }
     }
 
-    path_t pattern = get_file_name_without_extension(pattern_format);
     path_t format = get_file_extension(pattern_format);
+    path_t pattern = get_pattern(pattern_format);
 
-    if (format.empty())
-    {
-        pattern = PATHSTR("%08d");
-        format = pattern_format;
-    }
+    if (!pattern_format.empty()) {
 
-    if (pattern.empty())
-    {
-        pattern = PATHSTR("%08d");
-    }
-
-    if (!path_is_directory(outputpath))
-    {
-        // guess format from outputpath no matter what format argument specified
-        path_t ext = get_file_extension(outputpath);
-
-        if (ext == PATHSTR("png") || ext == PATHSTR("PNG"))
+        if (format.empty())
         {
-            format = PATHSTR("png");
+            format = pattern_format;
         }
-        else if (ext == PATHSTR("webp") || ext == PATHSTR("WEBP"))
-        {
-            format = PATHSTR("webp");
-        }
-        else if (ext == PATHSTR("jpg") || ext == PATHSTR("JPG") || ext == PATHSTR("jpeg") || ext == PATHSTR("JPEG"))
-        {
-            format = PATHSTR("jpg");
-        }
-        else
-        {
-            fprintf(stderr, "invalid outputpath extension type\n");
-            return -1;
-        }
-    }
 
-    if (format != PATHSTR("png") && format != PATHSTR("webp") && format != PATHSTR("jpg"))
-    {
-        fprintf(stderr, "invalid format argument\n");
-        return -1;
+        if (!path_is_directory(outputpath))
+        {
+            // guess format from outputpath no matter what format argument specified
+            path_t ext = get_file_extension(outputpath);
+
+            if (ext == PATHSTR("png"))
+            {
+                format = PATHSTR("png");
+            }
+            else if (ext == PATHSTR("webp"))
+            {
+                format = PATHSTR("webp");
+            }
+            else if (ext == PATHSTR("jpg") || ext == PATHSTR("jpeg"))
+            {
+                format = PATHSTR("jpg");
+            }
+            else
+            {
+                fprintf(stderr, "invalid outputpath extension type\n");
+                return -1;
+            }
+
+            if (format != PATHSTR("png") && format != PATHSTR("webp") && format != PATHSTR("jpg"))
+            {
+                fprintf(stderr, "invalid format argument\n");
+                return -1;
+            }
+        }
     }
 
     bool rife_v2 = false;
@@ -737,13 +740,25 @@ int main(int argc, char** argv)
 
 #if _WIN32
                 wchar_t tmp[256];
-                swprintf(tmp, pattern.c_str(), i+1);
+                path_t output_filename;
+                if (pattern.empty() && format.empty()) {
+                    output_filename = get_file_name_without_extension(filename0) + PATHSTR('.') + get_file_extension(filename0);
+                }
+                else if (!pattern.empty() && !format.empty()) {
+                    swprintf(tmp, pattern.c_str(), i + 1);
+                    output_filename = path_t(tmp) + PATHSTR('.') + format;
+            }
+                else if (pattern.empty() && !format.empty()) {
+                    swprintf(tmp, pattern.c_str(), i + 1);
+                    output_filename = get_file_name_without_extension(filename0) + PATHSTR('.') + format;
+                }
+                else {
+                    output_filename = path_t(tmp) + PATHSTR('.') + get_file_extension(filename0);
+                }
 #else
                 char tmp[256];
                 sprintf(tmp, pattern.c_str(), i+1); // ffmpeg start from 1
 #endif
-                path_t output_filename = path_t(tmp) + PATHSTR('.') + format;
-
                 input0_files[i] = inputpath + PATHSTR('/') + filename0;
                 input1_files[i] = inputpath + PATHSTR('/') + filename1;
                 output_files[i] = outputpath + PATHSTR('/') + output_filename;
@@ -765,7 +780,7 @@ int main(int argc, char** argv)
         }
     }
 
-    path_t modeldir = sanitize_dirpath(model);
+    path_t modeldir = sanitize_dirpath(modelpath + PATHSTR('/') + model);
 
 #if _WIN32
     CoInitializeEx(NULL, COINIT_MULTITHREADED);

@@ -96,6 +96,21 @@ static int list_directory(const path_t& dirpath, std::vector<path_t>& imagepaths
 }
 #endif // _WIN32
 
+
+static path_t get_pattern(const path_t& path)
+{
+    size_t percentSign = path.find(PATHSTR('%'));
+    if (percentSign == path_t::npos)
+        return PATHSTR("");  // Return an empty string if '%' is not found
+
+
+    size_t dot = path.rfind(PATHSTR('.'));
+    if (dot == path_t::npos)
+        return path;
+
+    return path.substr(0, dot);
+}
+
 static path_t get_file_name_without_extension(const path_t& path)
 {
     size_t dot = path.rfind(PATHSTR('.'));
@@ -107,11 +122,27 @@ static path_t get_file_name_without_extension(const path_t& path)
 
 static path_t get_file_extension(const path_t& path)
 {
-    size_t dot = path.rfind(PATHSTR('.'));
+    path_t lowercasePath = path;
+    std::transform(lowercasePath.begin(), lowercasePath.end(), lowercasePath.begin(), ::tolower);
+
+    if (lowercasePath == PATHSTR("png"))
+    {
+        return PATHSTR("png");
+    }
+    else if (lowercasePath == PATHSTR("webp"))
+    {
+        return PATHSTR("webp");
+    }
+    else if (lowercasePath == PATHSTR("jpg") || lowercasePath == PATHSTR("jpeg"))
+    {
+        return PATHSTR("jpg");
+    }
+
+    size_t dot = lowercasePath.rfind(PATHSTR('.'));
     if (dot == path_t::npos)
         return path_t();
 
-    return path.substr(dot + 1);
+    return lowercasePath.substr(dot + 1);
 }
 
 #if _WIN32
