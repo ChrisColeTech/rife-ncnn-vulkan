@@ -435,7 +435,26 @@ void* save(void* args)
     return 0;
 }
 
+#include <iomanip>
+#include <sstream>
 
+// Assuming path_t is a typedef or using statement for a string type
+using path_t = std::wstring; // Adjust this according to your actual definition
+
+// Function to calculate the filename based on the frame number and original filename
+path_t calculateFilename(const path_t& originalFilename, int frameNumber, int totalFrames)
+{
+    // Determine the number of digits needed for padding
+    int numDigits = static_cast<int>(std::log10(totalFrames)) + 1;
+
+    // Extract the filename without extension from the original filename
+    path_t baseFilename = get_file_name_without_extension(originalFilename);
+
+    // Create the filename with leading zeros
+    std::wstringstream filenameStream;
+    filenameStream << baseFilename << L"_" << std::setw(numDigits) << std::setfill(L'0') << frameNumber;
+    return filenameStream.str();
+}
 #if _WIN32
 int wmain(int argc, wchar_t** argv)
 #else
@@ -737,20 +756,22 @@ int main(int argc, char** argv)
 
                 path_t filename0 = filenames[sx];
                 path_t filename1 = filenames[sx + 1];
+                int frameNumber = i + 1; // Adjust frame number to start from 1
+                path_t name = calculateFilename(filename0, frameNumber, numframe);
 
 #if _WIN32
                 wchar_t tmp[256];
                 path_t output_filename;
                 if (pattern.empty() && format.empty()) {
-                    output_filename = get_file_name_without_extension(filename0) + PATHSTR('.') + get_file_extension(filename0);
+                    output_filename = name + PATHSTR('.') + get_file_extension(filename0);
                 }
                 else if (!pattern.empty() && !format.empty()) {
                     swprintf(tmp, pattern.c_str(), i + 1);
                     output_filename = path_t(tmp) + PATHSTR('.') + format;
-            }
+                }
                 else if (pattern.empty() && !format.empty()) {
                     swprintf(tmp, pattern.c_str(), i + 1);
-                    output_filename = get_file_name_without_extension(filename0) + PATHSTR('.') + format;
+                    output_filename = name + PATHSTR('.') + format;
                 }
                 else {
                     output_filename = path_t(tmp) + PATHSTR('.') + get_file_extension(filename0);
